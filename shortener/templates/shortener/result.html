@@ -1,0 +1,62 @@
+{% extends "shortener/base.html" %}
+
+{% block title %}短链接已生成 · ShortLink{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card border-start border-4 border-success">
+      <div class="card-body p-4 p-md-5">
+        <h1 class="h4 fw-bold mb-1">✅ 短链接已生成</h1>
+        <p class="text-muted mb-4">短码 <code>{{ link.short_code }}</code>，有效期与映射永久保存。</p>
+
+        <label class="form-label fw-semibold" for="short-url-input">短链接</label>
+        <div class="input-group input-group-lg mb-4">
+          <input id="short-url-input" class="form-control short-url" type="text" value="{{ short_url }}" readonly>
+          <button class="btn btn-outline-secondary" id="copy-btn" type="button">复制</button>
+        </div>
+
+        <dl class="row mb-4">
+          <dt class="col-sm-3 text-muted fw-normal">原始链接</dt>
+          <dd class="col-sm-9 text-break"><a href="{{ link.original_url }}" rel="noopener">{{ link.original_url }}</a></dd>
+
+          <dt class="col-sm-3 text-muted fw-normal">当前点击次数</dt>
+          <dd class="col-sm-9">{{ link.click_count }}</dd>
+
+          <dt class="col-sm-3 text-muted fw-normal">创建时间</dt>
+          <dd class="col-sm-9">{{ link.created_at|date:"Y-m-d H:i:s" }}</dd>
+        </dl>
+
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-success" href="{{ short_url }}" target="_blank" rel="noopener">打开短链接</a>
+          <a class="btn btn-outline-primary" href="{{ stats_url }}">查看点击统计</a>
+          <a class="btn btn-outline-secondary" href="{% url 'shortener:create_link' %}">再创建一个</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var button = document.getElementById('copy-btn');
+    var input = document.getElementById('short-url-input');
+    if (!button || !input) return;
+    button.addEventListener('click', function () {
+      var done = function () {
+        button.textContent = '已复制';
+        setTimeout(function () { button.textContent = '复制'; }, 1500);
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(input.value).then(done);
+      } else {
+        input.select();
+        document.execCommand('copy');
+        done();
+      }
+    });
+  })();
+</script>
+{% endblock %}

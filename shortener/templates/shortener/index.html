@@ -1,0 +1,66 @@
+{% extends "shortener/base.html" %}
+
+{% block title %}创建短链接 · ShortLink{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body p-4 p-md-5">
+        <h1 class="h3 fw-bold mb-2">把长链接变短</h1>
+        <p class="text-muted mb-4">
+          输入任意 http / https 链接，系统会基于数据库自增 ID + Base62 生成 4~6 位短码，
+          并立即写入 Redis 缓存。
+        </p>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="{{ form.original_url.id_for_label }}">
+              {{ form.original_url.label }}
+            </label>
+            {{ form.original_url }}
+            {% for error in form.original_url.errors %}
+              <div class="text-danger small mt-2">⚠ {{ error }}</div>
+            {% endfor %}
+            <div class="form-text">省略协议头也可以，例如 <code>example.com/a</code> 会自动补全为 http://</div>
+          </div>
+          <button class="btn btn-primary btn-lg w-100" type="submit">生成短链接</button>
+        </form>
+      </div>
+    </div>
+
+    {% if recent_links %}
+      <div class="card mt-4">
+        <div class="card-header bg-white border-0 pt-4 px-4">
+          <h2 class="h6 mb-0 text-uppercase text-muted">最近生成的短链</h2>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col">短码</th>
+                <th scope="col">原始链接</th>
+                <th scope="col" class="text-end">点击</th>
+                <th scope="col" class="text-end">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in recent_links %}
+                <tr>
+                  <td><code>{{ item.short_code }}</code></td>
+                  <td class="text-truncate" style="max-width: 320px;">{{ item.original_url }}</td>
+                  <td class="text-end">{{ item.click_count }}</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'shortener:link_stats' item.short_code %}">统计</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

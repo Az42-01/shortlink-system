@@ -1,0 +1,20 @@
+{% extends "shortener/base.html" %}
+
+{% block title %}短链不存在 · ShortLink{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card text-center">
+      <div class="card-body p-5">
+        <div class="display-4 mb-2">🔍</div>
+        <h1 class="h4 fw-bold">短链接不存在</h1>
+        <p class="text-muted">
+          短码 <code>{{ short_code }}</code> 没有对应的记录，可能已被删除或从未生成。
+        </p>
+        <a class="btn btn-primary" href="{% url 'shortener:create_link' %}">去创建一个</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% load static %}<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}短链接系统{% endblock %}</title>
+  <link href="{% static 'vendor/bootstrap.min.css' %}" rel="stylesheet">
+  <link href="{% static 'vendor/bootstrap-icons.min.css' %}" rel="stylesheet">
+  <style>
+    body { background: #f5f7fb; }
+    .card { border: 0; box-shadow: 0 8px 28px rgba(15, 23, 42, .07); border-radius: 1rem; }
+    .short-url { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.25rem; }
+    .click-row td { font-size: .875rem; }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<nav class="navbar navbar-expand bg-dark navbar-dark">
+  <div class="container">
+    <a class="navbar-brand fw-semibold" href="{% url 'shortener:create_link' %}">🔗 ShortLink</a>
+    <span class="navbar-text small text-white-50 d-none d-md-inline">
+      Django + Redis 缓存 + Base62
+    </span>
+  </div>
+</nav>
+
+<main class="container py-5">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="text-center text-muted small pb-4">
+  ShortLink · Django + Redis + Base62 · 数据看板由 ECharts 渲染
+</footer>
+<script src="{% static 'vendor/bootstrap.bundle.min.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

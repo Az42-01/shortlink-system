@@ -1,0 +1,626 @@
+{% extends "shortener/base.html" %}
+{% load static %}
+
+{% block title %}数据看板 {{ link.short_code }} · ShortLink{% endblock %}
+
+{% block extra_head %}
+<style>
+  body {
+    background:
+      radial-gradient(1100px 520px at 12% -12%, #e8edff 0%, rgba(232, 237, 255, 0) 62%),
+      radial-gradient(900px 480px at 92% 0%, #e0f7fa 0%, rgba(224, 247, 250, 0) 55%),
+      #f5f7fb;
+  }
+  .dash-brand-gradient { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 45%, #06b6d4 100%); }
+
+  /* 顶部信息卡 */
+  .dash-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.25rem;
+    color: #fff;
+    background: linear-gradient(135deg, #111c44 0%, #312e81 52%, #1d4ed8 100%);
+    box-shadow: 0 24px 56px rgba(49, 46, 129, .32);
+  }
+  .dash-hero::before,
+  .dash-hero::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .dash-hero::before {
+    width: 360px; height: 360px; right: -90px; top: -150px;
+    background: radial-gradient(circle, rgba(56, 189, 248, .45) 0%, rgba(56, 189, 248, 0) 70%);
+  }
+  .dash-hero::after {
+    width: 280px; height: 280px; left: -120px; bottom: -160px;
+    background: radial-gradient(circle, rgba(139, 92, 246, .55) 0%, rgba(139, 92, 246, 0) 70%);
+  }
+  .dash-hero .short-url { color: #fff; font-size: 1.35rem; }
+  .dash-hero .short-url:hover { color: #c7d2fe; }
+  .hero-label { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: rgba(226, 232, 240, .72); }
+  .hero-chip {
+    background: rgba(255, 255, 255, .12);
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: .9rem;
+    padding: .9rem 1rem;
+    backdrop-filter: blur(6px);
+  }
+
+  /* KPI 卡片 */
+  .kpi-card {
+    border-radius: 1.15rem;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, .08);
+    transition: transform .22s ease, box-shadow .22s ease;
+  }
+  .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 24px 52px rgba(15, 23, 42, .14); }
+  .kpi-icon {
+    width: 2.75rem; height: 2.75rem;
+    border-radius: .95rem;
+    display: grid; place-items: center;
+    font-size: 1.2rem;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .04);
+  }
+  .kpi-label { font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; }
+  .kpi-value { font-size: 2rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
+  .kpi-value.text-lg { font-size: 1.5rem; }
+
+  /* 图表卡片 */
+  .chart-card { border-radius: 1.25rem; box-shadow: 0 26px 60px rgba(15, 23, 42, .11); }
+  .chart-box { width: 100%; height: 340px; }
+  .chart-box.is-pie { height: 300px; }
+  .chart-wrap { position: relative; }
+  .chart-overlay {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    text-align: center;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, .82);
+    color: #94a3b8;
+    font-size: .9rem;
+  }
+  .chart-overlay.is-error { color: #dc2626; }
+  .chart-badge {
+    display: inline-flex; align-items: center; gap: .35rem;
+    border-radius: 999px;
+    padding: .3rem .7rem;
+    font-size: .78rem; font-weight: 600;
+  }
+
+  /* 明细表 */
+  .table-shell { border-radius: 1.25rem; overflow: hidden; box-shadow: 0 22px 52px rgba(15, 23, 42, .09); }
+  .table-shell thead th {
+    font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 600;
+    color: #64748b; border-bottom: 1px solid #eef2f7; padding: .85rem 1.25rem;
+  }
+  .table-shell tbody td { padding: .8rem 1.25rem; border-color: #f1f5f9; }
+  .table-shell tbody tr:hover { background: #f8faff; }
+  .ua-cell { max-width: 360px; }
+  .device-pill { font-size: .72rem; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1 small">
+        <li class="breadcrumb-item"><a class="text-decoration-none" href="{% url 'shortener:create_link' %}">首页</a></li>
+        <li class="breadcrumb-item active" aria-current="page">数据看板</li>
+      </ol>
+    </nav>
+    <h1 class="h3 fw-bold mb-0">
+      短链数据看板
+      <span class="badge rounded-pill bg-white text-primary border ms-1 align-middle fw-semibold">{{ link.short_code }}</span>
+    </h1>
+    <p class="text-muted small mb-0 mt-1">
+      数据更新于 {{ updated_at|date:"Y-m-d H:i:s" }} · 图表由后端 JSON 接口实时驱动
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-secondary" href="{{ short_url }}" target="_blank" rel="noopener">
+      <i class="bi bi-box-arrow-up-right me-1"></i>打开短链
+    </a>
+    <a class="btn btn-outline-secondary" href="{% url 'shortener:create_link' %}">
+      <i class="bi bi-arrow-left me-1"></i>返回首页
+    </a>
+  </div>
+</div>
+
+<div class="dash-hero p-4 p-md-5 mb-4">
+  <div class="row g-4 align-items-center position-relative">
+    <div class="col-lg-7">
+      <div class="hero-label mb-2">短链接</div>
+      <a class="short-url d-inline-block text-break mb-3" href="{{ short_url }}" target="_blank" rel="noopener">{{ short_url }}</a>
+      <div class="hero-label mb-1">原始链接</div>
+      <a class="link-light text-break small" href="{{ link.original_url }}" rel="noopener">{{ link.original_url }}</a>
+    </div>
+    <div class="col-lg-5">
+      <div class="row g-3">
+        <div class="col-sm-6">
+          <div class="hero-chip h-100">
+            <div class="hero-label mb-1">链接状态</div>
+            <div class="fw-semibold">
+              {% if link.is_active %}
+                <i class="bi bi-broadcast me-1 text-info"></i>启用中
+              {% else %}
+                <i class="bi bi-pause-circle me-1"></i>已停用
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6">
+          <div class="hero-chip h-100">
+            <div class="hero-label mb-1">创建时间</div>
+            <div class="fw-semibold small">{{ link.created_at|date:"Y-m-d H:i" }}</div>
+          </div>
+        </div>
+        <div class="col-sm-6">
+          <div class="hero-chip h-100">
+            <div class="hero-label mb-1">独立访客</div>
+            <div class="fw-semibold">{{ unique_visitors }} <span class="small text-white-50">个 IP</span></div>
+          </div>
+        </div>
+        <div class="col-sm-6">
+          <div class="hero-chip h-100">
+            <div class="hero-label mb-1">主要设备</div>
+            <div class="fw-semibold">{{ top_device_label }} <span class="small text-white-50">{{ top_device_share }}%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="row g-4 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="card kpi-card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="kpi-label text-muted">累计点击</div>
+            <div class="kpi-value mt-2" data-countup="{{ link.click_count }}">{{ link.click_count }}</div>
+          </div>
+          <span class="kpi-icon bg-primary-subtle text-primary"><i class="bi bi-cursor-fill"></i></span>
+        </div>
+        <div class="text-muted small mt-3"><i class="bi bi-signpost-2 me-1"></i>短码 {{ link.short_code }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="card kpi-card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="kpi-label text-muted">近 {{ trend_days }} 天点击</div>
+            <div class="kpi-value mt-2 text-primary" data-countup="{{ trend_total }}">{{ trend_total }}</div>
+          </div>
+          <span class="kpi-icon bg-info-subtle text-info-emphasis"><i class="bi bi-graph-up-arrow"></i></span>
+        </div>
+        <div class="text-muted small mt-3"><i class="bi bi-calendar3 me-1"></i>按本地自然日统计</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="card kpi-card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="kpi-label text-muted">独立 IP</div>
+            <div class="kpi-value mt-2" data-countup="{{ unique_visitors }}">{{ unique_visitors }}</div>
+          </div>
+          <span class="kpi-icon bg-success-subtle text-success-emphasis"><i class="bi bi-people-fill"></i></span>
+        </div>
+        <div class="text-muted small mt-3"><i class="bi bi-shield-check me-1"></i>按访问 IP 去重</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="card kpi-card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1">
+            <div class="kpi-label text-muted">主要设备</div>
+            <div class="kpi-value text-lg mt-2">{{ top_device_label }}</div>
+          </div>
+          <span class="kpi-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-phone-fill"></i></span>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-3">
+          <div class="progress flex-grow-1" style="height: .4rem;" role="progressbar"
+               aria-label="主要设备占比" aria-valuenow="{{ top_device_share }}" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar dash-brand-gradient" style="width: {{ top_device_share }}%;"></div>
+          </div>
+          <span class="text-muted small">{{ top_device_share }}%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="row g-4 mb-4">
+  <div class="col-xl-8">
+    <div class="card chart-card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+          <div>
+            <h2 class="h6 fw-bold mb-1">点击趋势</h2>
+            <p class="text-muted small mb-0">最近 {{ trend_days }} 天每日点击量</p>
+          </div>
+          <span class="chart-badge bg-primary-subtle text-primary-emphasis">
+            <i class="bi bi-activity"></i>合计 {{ trend_total }} 次
+          </span>
+        </div>
+        <div class="chart-wrap">
+          <div id="trend-chart" class="chart-box"></div>
+          <div id="trend-overlay" class="chart-overlay d-none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <div class="card chart-card h-100">
+      <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+          <div>
+            <h2 class="h6 fw-bold mb-1">访问设备分布</h2>
+            <p class="text-muted small mb-0">从 User-Agent 解析</p>
+          </div>
+          <span class="chart-badge bg-warning-subtle text-warning-emphasis">
+            <i class="bi bi-pie-chart-fill"></i>{{ device_total }} 条
+          </span>
+        </div>
+        <div class="chart-wrap">
+          <div id="device-chart" class="chart-box is-pie"></div>
+          <div id="device-overlay" class="chart-overlay d-none"></div>
+        </div>
+        <div id="device-legend" class="d-flex justify-content-center flex-wrap gap-3 small text-muted"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card table-shell">
+  <div class="card-header bg-white border-0 pt-4 px-4 pb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h2 class="h6 fw-bold mb-1">最近 20 次访问</h2>
+      <p class="text-muted small mb-0">点击日志由后台线程批量写入，跳转后可能有 1 秒左右的延迟。</p>
+    </div>
+    <a class="btn btn-sm btn-outline-primary" href="{{ api_url }}" target="_blank" rel="noopener">
+      <i class="bi bi-braces me-1"></i>查看 JSON
+    </a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th scope="col">访问时间</th>
+          <th scope="col">IP</th>
+          <th scope="col">设备</th>
+          <th scope="col">User-Agent</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in recent_rows %}
+          <tr class="click-row">
+            <td class="text-nowrap">{{ row.click.created_at|date:"Y-m-d H:i:s" }}</td>
+            <td><code class="text-secondary">{{ row.click.ip_address|default:"-" }}</code></td>
+            <td class="text-nowrap">
+              {% if row.device_key == "pc" %}
+                <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis device-pill"><i class="bi bi-display me-1"></i>{{ row.device_label }}</span>
+              {% elif row.device_key == "mobile" %}
+                <span class="badge rounded-pill bg-info-subtle text-info-emphasis device-pill"><i class="bi bi-phone me-1"></i>{{ row.device_label }}</span>
+              {% else %}
+                <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis device-pill"><i class="bi bi-question-circle me-1"></i>{{ row.device_label }}</span>
+              {% endif %}
+            </td>
+            <td class="text-truncate ua-cell text-muted">{{ row.click.user_agent|default:"-"|truncatechars:100 }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-5">
+              <i class="bi bi-inbox fs-3 d-block mb-2"></i>还没有点击记录
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script src="{% static 'vendor/echarts.min.js' %}"></script>
+<script>
+(function () {
+  "use strict";
+
+  var apiUrl = "{{ api_url }}";
+  var trendEl = document.getElementById("trend-chart");
+  var deviceEl = document.getElementById("device-chart");
+  var trendOverlay = document.getElementById("trend-overlay");
+  var deviceOverlay = document.getElementById("device-overlay");
+  var legendEl = document.getElementById("device-legend");
+  var DEVICE_COLORS = ["#6366f1", "#06b6d4", "#f59e0b"];
+  var trendChart = null;
+  var deviceChart = null;
+
+  /* ----------------------------- 小工具 ----------------------------- */
+  function showOverlay(el, message, isError) {
+    if (!el) return;
+    el.textContent = message;
+    el.classList.toggle("is-error", !!isError);
+    el.classList.remove("d-none");
+  }
+
+  function hideOverlay(el) {
+    if (!el) return;
+    el.classList.add("d-none");
+    el.classList.remove("is-error");
+  }
+
+  // KPI 数字从 0 滚动到目标值，尊重「减少动效」偏好
+  function animateCounters() {
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-countup]"), function (el) {
+      var target = parseInt(el.getAttribute("data-countup"), 10);
+      if (isNaN(target) || target < 1) return;
+      var startedAt = null;
+      var tick = function (timestamp) {
+        if (startedAt === null) startedAt = timestamp;
+        var progress = Math.min((timestamp - startedAt) / 700, 1);
+        var eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(target * eased).toLocaleString("zh-CN");
+        if (progress < 1) window.requestAnimationFrame(tick);
+      };
+      el.textContent = "0";
+      window.requestAnimationFrame(tick);
+    });
+  }
+
+  /* --------------------------- 折线图：趋势 --------------------------- */
+  function renderTrend(trend) {
+    if (trendChart) trendChart.hideLoading();
+    hideOverlay(trendOverlay);
+
+    var labels = (trend.labels || []).map(function (day) {
+      return day.slice(5).replace("-", "/");
+    });
+    var values = trend.values || [];
+    if (!values.length) {
+      showOverlay(trendOverlay, "暂无趋势数据");
+      return;
+    }
+
+    // 一周内的点击量通常不大，y 轴最小值直接取 0，避免小波动被放大
+    var maxValue = Math.max.apply(null, values.concat([0]));
+
+    trendChart.setOption({
+      grid: { left: 6, right: 18, top: 26, bottom: 6, containLabel: true },
+      tooltip: {
+        trigger: "axis",
+        backgroundColor: "rgba(15, 23, 42, .92)",
+        borderWidth: 0,
+        padding: [10, 14],
+        textStyle: { color: "#f8fafc", fontSize: 12 },
+        axisPointer: {
+          type: "line",
+          lineStyle: { color: "rgba(99, 102, 241, .35)", width: 1.5, type: "dashed" }
+        },
+        formatter: function (params) {
+          var point = params[0];
+          return '<div style="font-weight:600;margin-bottom:4px">' + (trend.labels || [])[point.dataIndex] + '</div>' +
+                 point.marker + " 点击量：<b>" + point.value + "</b> 次";
+        }
+      },
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: labels,
+        axisLine: { lineStyle: { color: "#e2e8f0" } },
+        axisTick: { show: false },
+        axisLabel: { color: "#94a3b8", fontSize: 11, margin: 12 }
+      },
+      yAxis: {
+        type: "value",
+        min: 0,
+        minInterval: 1,
+        max: maxValue === 0 ? 4 : undefined,
+        splitLine: { lineStyle: { color: "#eef2f7", type: "dashed" } },
+        axisLabel: { color: "#94a3b8", fontSize: 11 }
+      },
+      series: [{
+        name: "点击量",
+        type: "line",
+        smooth: true,
+        symbol: "circle",
+        symbolSize: 8,
+        showSymbol: true,
+        data: values,
+        lineStyle: {
+          width: 3,
+          color: "#6366f1",
+          shadowColor: "rgba(79, 70, 229, .35)",
+          shadowBlur: 12,
+          shadowOffsetY: 8
+        },
+        itemStyle: {
+          color: "#6366f1",
+          borderColor: "#ffffff",
+          borderWidth: 2,
+          shadowBlur: 8,
+          shadowColor: "rgba(79, 70, 229, .45)"
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(99, 102, 241, .32)" },
+            { offset: 1, color: "rgba(99, 102, 241, 0)" }
+          ])
+        },
+        emphasis: {
+          focus: "series",
+          itemStyle: { borderWidth: 3, shadowBlur: 16, shadowColor: "rgba(79, 70, 229, .6)" }
+        }
+      }]
+    }, true);
+  }
+
+
+
+  /* ---------------------------- 饼图：设备 ---------------------------- */
+  function renderDeviceLegend(labels, values, total) {
+    if (!legendEl) return;
+    legendEl.innerHTML = "";
+    labels.forEach(function (label, index) {
+      var value = values[index] || 0;
+      var percent = total ? Math.round((value * 100) / total) : 0;
+
+      var item = document.createElement("span");
+      item.className = "d-inline-flex align-items-center gap-2";
+
+      var dot = document.createElement("span");
+      dot.style.width = "0.55rem";
+      dot.style.height = "0.55rem";
+      dot.style.borderRadius = "50%";
+      dot.style.background = DEVICE_COLORS[index % DEVICE_COLORS.length];
+
+      var text = document.createElement("span");
+      text.textContent = label + " " + value + " · " + percent + "%";
+
+      item.appendChild(dot);
+      item.appendChild(text);
+      legendEl.appendChild(item);
+    });
+  }
+
+  function renderDevices(devices) {
+    if (deviceChart) deviceChart.hideLoading();
+    hideOverlay(deviceOverlay);
+
+    var labels = devices.labels || [];
+    var values = devices.values || [];
+    var total = devices.total || 0;
+    var data = labels.map(function (label, index) {
+      return { name: label, value: values[index] || 0 };
+    });
+
+    renderDeviceLegend(labels, values, total);
+
+    deviceChart.setOption({
+      color: DEVICE_COLORS,
+      tooltip: {
+        trigger: "item",
+        backgroundColor: "rgba(15, 23, 42, .92)",
+        borderWidth: 0,
+        padding: [10, 14],
+        textStyle: { color: "#f8fafc", fontSize: 12 },
+        formatter: function (params) {
+          return params.marker + params.name + "：<b>" + params.value + "</b> 次（" + params.percent + "%）";
+        }
+      },
+      series: [{
+        name: "设备类型",
+        type: "pie",
+        radius: ["54%", "76%"],
+        center: ["50%", "46%"],
+        avoidLabelOverlap: true,
+        itemStyle: {
+          borderColor: "#ffffff",
+          borderWidth: 3,
+          borderRadius: 10,
+          shadowBlur: 20,
+          shadowColor: "rgba(15, 23, 42, .18)"
+        },
+        label: { show: false },
+        labelLine: { show: false },
+        emphasis: {
+          scale: true,
+          scaleSize: 6,
+          label: {
+            show: true,
+            fontSize: 15,
+            fontWeight: 600,
+            color: "#0f172a",
+            lineHeight: 22,
+            formatter: "{b}\n{d}%"
+          }
+        },
+        data: total ? data : []
+      }],
+      graphic: [
+        {
+          type: "text",
+          left: "center",
+          top: "37%",
+          silent: true,
+          style: { text: String(total), fill: "#0f172a", fontSize: 26, fontWeight: 700, textAlign: "center" }
+        },
+        {
+          type: "text",
+          left: "center",
+          top: "50%",
+          silent: true,
+          style: { text: "总点击", fill: "#94a3b8", fontSize: 12, textAlign: "center" }
+        }
+      ]
+    }, true);
+
+    if (!total) showOverlay(deviceOverlay, "暂无点击数据");
+  }
+
+  /* ------------------------------ 启动 ------------------------------ */
+  function boot() {
+    animateCounters();
+
+    if (!window.echarts) {
+      showOverlay(trendOverlay, "图表库未能加载，请刷新页面重试", true);
+      showOverlay(deviceOverlay, "图表库未能加载，请刷新页面重试", true);
+      return;
+    }
+
+    trendChart = echarts.init(trendEl);
+    deviceChart = echarts.init(deviceEl);
+
+    var loadingStyle = {
+      text: "加载中…",
+      color: "#6366f1",
+      textColor: "#94a3b8",
+      maskColor: "rgba(255, 255, 255, .65)"
+    };
+    trendChart.showLoading("default", loadingStyle);
+    deviceChart.showLoading("default", loadingStyle);
+
+    window.addEventListener("resize", function () {
+      trendChart.resize();
+      deviceChart.resize();
+    });
+
+    fetch(apiUrl, { headers: { "Accept": "application/json" }, credentials: "same-origin" })
+      .then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        renderTrend(data.trend || {});
+        renderDevices(data.devices || {});
+      })
+      .catch(function (error) {
+        if (trendChart) trendChart.hideLoading();
+        if (deviceChart) deviceChart.hideLoading();
+        showOverlay(trendOverlay, "数据加载失败：" + error.message, true);
+        showOverlay(deviceOverlay, "数据加载失败：" + error.message, true);
+      });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+{% endblock %}
